@@ -1,0 +1,195 @@
+### Nginx + Docker + CRA
+
+```bash
+$ docker-compose build frontend
+$ docker-compose up -d frontend
+```
+
+
+Dockerfile
+
+```
+# Stage 0, "build-stage" to build and compile the frontend
+from node:11-alpine as build-stage
+WORKDIR /app
+COPY . ./
+   RUN npm i
+   RUN yarn install
+   RUN npm run build
+
+# Stage 1, to have only the compiled app, ready for production with Nginx
+from nginx:1.15-alpine
+COPY --from=build-stage /app/build /usr/share/nginx/html
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+```
+
+
+nginx.conf
+
+```
+server {
+  listen 80;
+  location / {
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+    try_files $uri $uri/ /index.html =404;
+  }
+  include /etc/nginx/extra-conf.d/*.conf;
+}
+```
+
+
+docker-compose.yml
+
+```
+version: '3.6'
+services:
+  frontend:
+    build:
+      context: . 
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf # to mount custom nginx.conf
+    ports:
+      - "80:80"
+```
+
+
+https://docs.docker.com/compose/gettingstarted/
+
+
+
+### Безопасноть
+
+
+#### Вопросы на собеседованиях
+
+Общие
+
+- Что такое компьютерная безопасность?
+- Какие последствия могут быть, если в приложении есть риск атак? Как снизить риск атак?
+
+Конкретные
+
+- Что такое cookie
+- Что такое https
+- Что такое CSRF
+- Что такое XSS
+- Что такое CSP
+- Чем авторизация отличается от аутентификации Какие знаете способы аутентификации пользователя
+
+
+#### Компьютерная безопасность
+
+Процесс обеспечения
+
+- конфиденциальности данных
+- целостности данных
+- доступности данных
+
+для пользователей или клиентов информационных систем
+
+
+#### Конфиденциальность [Confidentiality]
+
+Система обеспечивает приватное хранение личных данных пользователя.
+
+Атаки: раскрытие информации против воли пользователя. [Disclosure attacks]
+
+
+#### Целостность [Integrity]
+
+Система обеспечивает надежное хранение личных данных.
+
+Атаки: изменение или уничтожение данных. [Alteration attacks]
+
+
+#### Доступность [Availability]
+
+Система в обеспечивает доступ пользователя к данным.
+
+Атаки: отказ от обслуживания. [Denial attacks]
+
+
+#### Терминология
+
+Ассет/актив/ценность [Asset] - объект, представляющий интерес для злоумышленника (личные данные пользователей, вычислительные ресурсы, репутация пользователя)
+
+
+Угроза [Threat] - действие, которое ведет к потере ценности актива (изменение прав собственности, уничтожение, повреждение или раскрытие актива)
+
+
+Уязвимость [Vulnerability] - слабое место в системе (передача пользовательских данных в `GET` параметре)
+
+
+Риск [Risk] - наличие в системе и уязвимости, и угрозы. Возможность совершения атаки.
+
+
+Атака [Attack] - реализованный риск.
+
+Не все риски ведут к атакам, но все атаки – результат реализации
+риска системы.
+
+
+Ослабление угроз [Mitigation] - процесс снижения рисков в системе за счет снижения количества уязвимостей или за счет обесценивания активов.
+
+Атаки не могут быть ослаблены. Снижать можно только риски
+
+
+#### Cookies
+
+Cookies – механизм хранения информации на клиенте, обеспечивая таким образом возможность идентификацию пользователя и/или его действий. Куки являются заголовком HTTP протокола.
+
+Назначение
+
+- Управление сеансом (логин, просмотренная лента, корзина)
+- Персонализация
+- Мониторинг
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies - читать обязательно
+
+
+Нужные атрибуты:
+
+Domain, Expires, Max-Age, Path
+
+Нужные флаги:
+
+Secure, HttpOnly, SameSite
+
+Пример:
+
+```
+Set-Cookie: id=longid; Domain=pets.mail.ru; Path=/rubrics; Expires=Wed, 10 Jun 2019 07:28:00 GMT; Secure; HttpOnly; SameSite;
+```
+
+
+https://medium.freecodecamp.org/web-security-hardening-http-cookies-be8d8d8016e1
+
+
+#### Аутентификация & Авторизация
+
+Аутентификация [Authentication] = логин + пароль (Кто ты?)
+Процесс удостоверения, что некто действительно тот, за кого себя выдает.
+
+
+Авторизация [Authorization] = доступы (permissions) (Что ты можешь?) Набор правил, определяющих, кто какие имеет возможности
+
+https://stackoverflow.com/questions/6556522/authentication-versus-authorization
+
+
+#### HTTPS
+
+http over tls
+
+https://hpbn.co/transport-layer-security-tls/
+
+
+- xss
+- SQL Injection
+- csrf
+- ssrf
+
+
+- same origin policy
+- content security policy
+- hsts HTTP Strict-Transport-Security
